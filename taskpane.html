@@ -21,10 +21,9 @@
 <body>
   <div class="marca"><img src="icone-32.png" alt="">CertiDoc</div>
   <p class="assunto" id="assunto">A ler o e-mail…</p>
-  <a class="bt" id="abrir" href="#">Abrir no CertiDoc</a>
-  <p class="nota" id="nota">Abre a Nova receção do CertiDoc com este e-mail e os anexos. Na primeira vez, o Windows pergunta se pode abrir o CertiDoc — escolha «Abrir» (e «permitir sempre»).</p>
+  <a class="bt" id="abrir" href="#" target="_blank" rel="noopener">Abrir no CertiDoc</a>
+  <p class="nota" id="nota">Carregue no botão: abre a Nova receção do CertiDoc com este e-mail e os anexos. Na primeira vez, o Windows pergunta se pode abrir o CertiDoc — escolha «Abrir» (e «permitir sempre»).</p>
 <script>
-  let ultimo = null;
   function linkDoEmail() {
     const mb = Office.context.mailbox, it = mb.item;
     if (!it || !it.itemId) return null;
@@ -33,17 +32,20 @@
     try { id = mb.convertToRestId(it.itemId, Office.MailboxEnums.RestVersion.v2_0); } catch (e) { /* fica o original */ }
     return { url: 'certidoc://rececao?email=' + encodeURIComponent(id) + '&assunto=' + encodeURIComponent(String(it.subject || '').slice(0, 80)), id: it.itemId, assunto: it.subject || '(sem assunto)' };
   }
-  function atualizar(abrirJa) {
+  function atualizar() {
     const l = linkDoEmail(), a = document.getElementById('abrir');
     if (!l) { document.getElementById('assunto').innerHTML = '<span class="erro">Abra um e-mail recebido para o guardar no CertiDoc.</span>'; a.style.display = 'none'; return; }
     a.style.display = ''; a.href = l.url;
     document.getElementById('assunto').textContent = l.assunto;
-    // ao carregar no botão do Outlook abre logo; com o painel fixado, ao mudar de e-mail só atualiza
-    if (abrirJa && ultimo !== l.id) { ultimo = l.id; window.location.href = l.url; }
   }
+  // o Outlook só deixa abrir um programa externo a partir de um clique: o próprio link (nova janela) abre o CertiDoc
+  document.getElementById('abrir').addEventListener('click', ev => {
+    if (!/^certidoc:/.test(ev.currentTarget.href)) { ev.preventDefault(); return; }
+    document.getElementById('nota').textContent = 'A abrir o CertiDoc… Se o Windows perguntar «Abrir CertiDoc?», escolha Abrir (e «permitir sempre»).';
+  });
   Office.onReady(() => {
-    atualizar(true);
-    try { Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, () => atualizar(false)); } catch (e) { /* Outlook sem painel fixável */ }
+    atualizar();
+    try { Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, () => atualizar()); } catch (e) { /* Outlook sem painel fixável */ }
   });
 </script>
 </body>
