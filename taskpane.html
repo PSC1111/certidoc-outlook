@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CertiDoc</title>
+<!-- Botão «Abrir no CertiDoc»: abre o CertiDoc do PC na Nova receção com o e-mail aberto no Outlook.
+     O CertiDoc vai buscar o e-mail à caixa da pessoa (Microsoft 365); aqui só se passa o identificador. -->
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+  body { margin: 0; padding: 16px; font: 13px/1.45 "Segoe UI", sans-serif; color: #1a1e1d; }
+  .marca { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #3D6842; margin-bottom: 14px; }
+  .marca img { width: 24px; height: 24px; }
+  .assunto { color: #5e6664; margin: 0 0 14px; word-break: break-word; }
+  a.bt { display: block; text-align: center; background: #3D6842; color: #fff; text-decoration: none; font-weight: 600; padding: 10px 12px; border-radius: 6px; }
+  a.bt:hover { background: #2f5a35; }
+  .nota { color: #5e6664; font-size: 12px; margin-top: 14px; }
+  .erro { color: #c4262e; }
+</style>
+</head>
+<body>
+  <div class="marca"><img src="icone-32.png" alt="">CertiDoc</div>
+  <p class="assunto" id="assunto">A ler o e-mail…</p>
+  <a class="bt" id="abrir" href="#">Abrir no CertiDoc</a>
+  <p class="nota" id="nota">Abre a Nova receção do CertiDoc com este e-mail e os anexos. Na primeira vez, o Windows pergunta se pode abrir o CertiDoc — escolha «Abrir» (e «permitir sempre»).</p>
+<script>
+  let ultimo = null;
+  function linkDoEmail() {
+    const mb = Office.context.mailbox, it = mb.item;
+    if (!it || !it.itemId) return null;
+    // o Graph usa o id «REST»; o CertiDoc ainda tenta as outras formas se este não servir
+    let id = it.itemId;
+    try { id = mb.convertToRestId(it.itemId, Office.MailboxEnums.RestVersion.v2_0); } catch (e) { /* fica o original */ }
+    return { url: 'certidoc://rececao?email=' + encodeURIComponent(id) + '&assunto=' + encodeURIComponent(String(it.subject || '').slice(0, 80)), id: it.itemId, assunto: it.subject || '(sem assunto)' };
+  }
+  function atualizar(abrirJa) {
+    const l = linkDoEmail(), a = document.getElementById('abrir');
+    if (!l) { document.getElementById('assunto').innerHTML = '<span class="erro">Abra um e-mail recebido para o guardar no CertiDoc.</span>'; a.style.display = 'none'; return; }
+    a.style.display = ''; a.href = l.url;
+    document.getElementById('assunto').textContent = l.assunto;
+    // ao carregar no botão do Outlook abre logo; com o painel fixado, ao mudar de e-mail só atualiza
+    if (abrirJa && ultimo !== l.id) { ultimo = l.id; window.location.href = l.url; }
+  }
+  Office.onReady(() => {
+    atualizar(true);
+    try { Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, () => atualizar(false)); } catch (e) { /* Outlook sem painel fixável */ }
+  });
+</script>
+</body>
+</html>
